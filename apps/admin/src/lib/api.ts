@@ -19,7 +19,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && typeof window !== 'undefined') {
       localStorage.removeItem('adminToken');
       localStorage.removeItem('adminRefresh');
-      window.location.href = '/admin/login';
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   },

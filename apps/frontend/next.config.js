@@ -4,7 +4,7 @@ const nextConfig = {
   output: 'standalone',
   env: {
     NEXT_PUBLIC_STRIPE_KEY: process.env.STRIPE_PUBLIC_KEY || '',
-    NEXT_PUBLIC_API_URL: process.env.API_URL || 'http://localhost:8080/api',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '/api',
   },
   async rewrites() {
     return [

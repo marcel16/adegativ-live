@@ -8,7 +8,13 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, { rawBody: true });
 
   app.enableCors({
-    origin: process.env.APP_URL || '*',
+    origin: [
+      process.env.APP_URL || 'http://localhost:8080',
+      'https://adega.queroservico.store',
+      'https://admin.adega.queroservico.com.br',
+      'https://tv.adega.queroservico.com.br',
+      'https://api.adega.queroservico.com.br',
+    ].filter(Boolean),
     credentials: true,
   });
   app.use(helmet.default({
