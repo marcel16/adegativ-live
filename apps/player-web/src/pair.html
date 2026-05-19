@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <title>AdegaTV Live - Parear TV</title>
+  <link rel="stylesheet" href="/css/tv-style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      color: white;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .container { text-align: center; padding: 40px; }
+    .logo { font-size: 2.5rem; font-weight: 800; background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+    .subtitle { color: #94a3b8; font-size: 1.1rem; margin-bottom: 40px; }
+    .code-box { background: rgba(255,255,255,0.05); border: 2px solid rgba(34, 197, 94, 0.3); border-radius: 20px; padding: 40px 60px; display: inline-block; animation: pulse 2s ease-in-out infinite; }
+    .code { font-size: 4rem; font-weight: 700; letter-spacing: 0.3em; color: #22c55e; font-family: 'Courier New', monospace; }
+    .code-label { font-size: 0.9rem; color: #64748b; margin-top: 15px; letter-spacing: 0.1em; text-transform: uppercase; }
+    .instructions { margin-top: 40px; color: #94a3b8; font-size: 0.95rem; line-height: 1.8; }
+    .instructions strong { color: #22c55e; }
+    .status { margin-top: 30px; padding: 12px 24px; background: rgba(34, 197, 94, 0.1); border-radius: 10px; color: #22c55e; font-size: 0.9rem; display: inline-block; }
+    .status.loading { background: rgba(234, 179, 8, 0.1); color: #eab308; }
+    @keyframes pulse {
+      0%, 100% { border-color: rgba(34, 197, 94, 0.3); box-shadow: 0 0 20px rgba(34, 197, 94, 0.1); }
+      50% { border-color: rgba(34, 197, 94, 0.6); box-shadow: 0 0 40px rgba(34, 197, 94, 0.2); }
+    }
+    @media (max-width: 600px) { .code { font-size: 2.5rem; } .code-box { padding: 30px 20px; } }
+  </style>
+</head>
+<body>
+  <div class="pair-container">
+    <div class="pair-logo">AdegaTV Live</div>
+    <div class="pair-subtitle">Player Web</div>
+    <div class="pair-code-box">
+      <div class="pair-code" id="pairingCode">------</div>
+      <div class="pair-code-label">Código de Pareamento</div>
+    </div>
+    <div class="pair-instructions">
+      Acesse o painel no seu computador<br>
+      e insira o código acima para vincular esta TV<br>
+      <strong>Código válido por 10 minutos</strong>
+    </div>
+    <div class="pair-status loading" id="status">Aguardando pareamento...</div>
+  </div>
+
+  <script>
+    const API_URL = window.location.origin.replace(':3004', '') || 'http://localhost:3000';
+    const urlParams = new URLSearchParams(window.location.search);
+    const platform = urlParams.get('platform') || 'WEB';
+    const deviceModel = urlParams.get('model') || 'Web Player';
+    let deviceToken = localStorage.getItem('adegatv_deviceToken');
+    let currentCode = localStorage.getItem('adegatv_pairingCode');
+
+    async function init() {
+      if (deviceToken) {
+        try {
+          const res = await fetch(`${API_URL}/api/tv/playlist/${deviceToken}`);
+          if (res.ok) {
+            localStorage.setItem('adegatv_sessionToken', deviceToken);
+            window.location.href = `/player/${deviceToken}`;
+            return;
+          }
+        } catch {}
+      }
+
+      if (currentCode) {
+        document.getElementById('pairingCode').textContent = currentCode;
+        checkPairing();
+        return;
+      }
+
+      try {
+        const res = await fetch(`${API_URL}/api/tv/pairing/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform, model: deviceModel }),
+        });
+        const data = await res.json();
+        deviceToken = data.deviceToken;
+        currentCode = data.code;
+        localStorage.setItem('adegatv_deviceToken', data.deviceToken);
+        localStorage.setItem('adegatv_tvId', data.tvDeviceId);
+        localStorage.setItem('adegatv_pairingCode', data.code);
+        document.getElementById('pairingCode').textContent = data.code;
+        checkPairing();
+      } catch (err) {
+        document.getElementById('status').textContent = 'Erro ao conectar. Tentando novamente...';
+        document.getElementById('status').className = 'status loading';
+        setTimeout(init, 5000);
+      }
+    }
+
+    async function checkPairing() {
+      document.getElementById('status').textContent = 'Aguardando pareamento...';
+      document.getElementById('status').className = 'status loading';
+
+      const check = setInterval(async () => {
+        try {
+          const res = await fetch(`${API_URL}/api/tv/playlist/${deviceToken}`);
+          if (res.ok) {
+            clearInterval(check);
+            localStorage.setItem('adegatv_sessionToken', deviceToken);
+            localStorage.removeItem('adegatv_pairingCode');
+            document.getElementById('status').textContent = 'TV vinculada! Iniciando...';
+            document.getElementById('status').className = 'status';
+            setTimeout(() => { window.location.href = `/player/${deviceToken}`; }, 1500);
+          }
+        } catch {}
+      }, 5000);
+
+      setTimeout(() => {
+        clearInterval(check);
+        localStorage.removeItem('adegatv_pairingCode');
+        document.getElementById('status').textContent = 'Código expirado. Recarregue a página para um novo código.';
+        document.getElementById('status').className = 'status';
+      }, 600000);
+    }
+
+    init();
+  </script>
+  <script src="/js/tv-nav.js"></script>
+</body>
+</html>

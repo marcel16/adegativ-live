@@ -1,0 +1,449 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+enum UserRole {
+  CLIENT
+  ADMIN
+}
+
+enum PlanStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  EXPIRED
+  CANCELED
+  BLOCKED
+}
+
+enum TVPlatform {
+  SAMSUNG
+  LG
+  ANDROID_TV
+  ROKU
+  WEB
+}
+
+enum TVStatus {
+  ONLINE
+  OFFLINE
+  BLOCKED
+  PAIRING
+}
+
+enum MediaType {
+  VIDEO
+  IMAGE
+  YOUTUBE
+  EXTERNAL
+}
+
+enum MediaStatus {
+  PROCESSING
+  READY
+  ERROR
+  EXPIRED
+}
+
+enum SchedulePriority {
+  LOW
+  NORMAL
+  HIGH
+  EMERGENCY
+}
+
+enum LoopMode {
+  SEQUENTIAL
+  RANDOM
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REFUNDED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentGateway {
+  STRIPE
+  ASAAS
+}
+
+// === USERS ===
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  avatarUrl     String?
+  role          UserRole  @default(CLIENT)
+  emailVerified Boolean   @default(false)
+  isBlocked     Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  companies     Company[]
+  sessions      Session[]
+  logs          Log[]
+
+  @@map("users")
+}
+
+// === SESSIONS ===
+model Session {
+  id           String   @id @default(uuid())
+  userId       String
+  refreshToken String   @unique
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// === COMPANIES ===
+model Company {
+  id        String   @id @default(uuid())
+  userId    String
+  name      String
+  document  String?
+  phone     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  adegas  Adega[]
+  coupons Coupon[]
+
+  @@map("companies")
+}
+
+// === ADEGAS ===
+model Adega {
+  id              String   @id @default(uuid())
+  companyId       String
+  name            String
+  logoUrl         String?
+  address         String?
+  city            String?
+  state           String?
+  zipCode         String?
+  phone           String?
+  openingHours    Json?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  company     Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tvDevices   TVDevice[]
+  schedules   Schedule[]
+  campaigns   Campaign[]
+  playlists   Playlist[]
+  mediaFiles  MediaFile[]
+  storageUsage StorageUsage?
+
+  @@map("adegas")
+}
+
+// === TV DEVICES ===
+model TVDevice {
+  id             String    @id @default(uuid())
+  adegaId        String?
+  name           String?
+  model          String?
+  platform       TVPlatform
+  resolution     String?
+  status         TVStatus   @default(PAIRING)
+  deviceToken    String     @unique
+  lastIp         String?
+  lastAccessAt   DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  adega               Adega             @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+  pairingCode         PairingCode?
+  scheduleItems       ScheduleItem[]
+  deviceSession       DeviceSession?
+
+  @@map("tv_devices")
+}
+
+// === PAIRING CODES ===
+model PairingCode {
+  id         String   @id @default(uuid())
+  code       String   @unique
+  tvDeviceId String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  tvDevice TVDevice @relation(fields: [tvDeviceId], references: [id], onDelete: Cascade)
+
+  @@map("pairing_codes")
+}
+
+// === DEVICE SESSIONS ===
+model DeviceSession {
+  id         String   @id @default(uuid())
+  tvDeviceId String   @unique
+  token      String   @unique
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  tvDevice TVDevice @relation(fields: [tvDeviceId], references: [id], onDelete: Cascade)
+
+  @@map("device_sessions")
+}
+
+// === PLANS ===
+model Plan {
+  id                  String     @id @default(uuid())
+  name                String
+  description         String?
+  priceMonthly        Decimal    @default(0)
+  priceYearly         Decimal    @default(0)
+  annualDiscountPercent Int      @default(0)
+  maxTvs              Int        @default(2)
+  maxAdegas           Int        @default(1)
+  maxStorageGb        Int        @default(5)
+  maxDurationSec      Int?
+  hasScheduling       Boolean    @default(true)
+  hasAnalytics        Boolean    @default(false)
+  hasYoutubeImport    Boolean    @default(false)
+  hasAiFeatures       Boolean    @default(false)
+  features            Json?
+  isHighlighted       Boolean    @default(false)
+  status              PlanStatus @default(ACTIVE)
+  sortOrder           Int        @default(0)
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  subscriptions Subscription[]
+
+  @@map("plans")
+}
+
+// === SUBSCRIPTIONS ===
+model Subscription {
+  id                String             @id @default(uuid())
+  companyId         String
+  planId            String
+  status            SubscriptionStatus @default(TRIAL)
+  trialEndsAt       DateTime
+  currentPeriodStart DateTime?
+  currentPeriodEnd  DateTime?
+  canceledAt        DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  company  Company?
+  plan     Plan     @relation(fields: [planId], references: [id])
+  payments Payment[]
+
+  @@map("subscriptions")
+}
+
+// === PAYMENTS ===
+model Payment {
+  id              String         @id @default(uuid())
+  subscriptionId  String
+  gateway         PaymentGateway
+  gatewayId       String?
+  amount          Decimal
+  currency        String         @default("BRL")
+  status          PaymentStatus  @default(PENDING)
+  paymentMethod   String?
+  invoiceUrl      String?
+  dueDate         DateTime
+  paidAt          DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id])
+
+  @@map("payments")
+}
+
+// === COUPONS ===
+model Coupon {
+  id              String    @id @default(uuid())
+  companyId       String?
+  code            String    @unique
+  discountPercent Decimal   @default(0)
+  discountAmount  Decimal   @default(0)
+  maxUses         Int?
+  usedCount       Int       @default(0)
+  expiresAt       DateTime?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+
+  company Company? @relation(fields: [companyId], references: [id])
+
+  @@map("coupons")
+}
+
+// === MEDIA FILES ===
+model MediaFile {
+  id            String     @id @default(uuid())
+  adegaId       String
+  name          String
+  originalName  String
+  mimeType      String
+  size          Int
+  width         Int?
+  height        Int?
+  duration      Float?
+  type          MediaType  @default(VIDEO)
+  status        MediaStatus @default(PROCESSING)
+  url           String?
+  thumbnailUrl  String?
+  folder        String?
+  tags          String[]
+  metadata      Json?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  adega         Adega        @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+  scheduleItems ScheduleItem[]
+
+  @@map("media_files")
+}
+
+// === TEMPLATES ===
+model Template {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  previewUrl  String?
+  category    String?
+  config      Json?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("templates")
+}
+
+// === PLAYLISTS ===
+model Playlist {
+  id        String   @id @default(uuid())
+  adegaId   String
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adega         Adega          @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+  scheduleItems ScheduleItem[]
+
+  @@map("playlists")
+}
+
+// === SCHEDULES ===
+model Schedule {
+  id        String   @id @default(uuid())
+  adegaId   String
+  name      String
+  isActive  Boolean  @default(true)
+  loopMode  LoopMode @default(SEQUENTIAL)
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adega  Adega          @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+  items  ScheduleItem[]
+
+  @@map("schedules")
+}
+
+// === SCHEDULE ITEMS ===
+model ScheduleItem {
+  id          String           @id @default(uuid())
+  scheduleId  String
+  playlistId  String?
+  mediaFileId String?
+  tvDeviceId  String?
+  campaignId  String?
+  priority    SchedulePriority @default(NORMAL)
+  dayOfWeek   Int?
+  startTime   String?
+  endTime     String?
+  duration    Int?
+  sortOrder   Int              @default(0)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  schedule  Schedule   @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  playlist  Playlist?  @relation(fields: [playlistId], references: [id])
+  mediaFile MediaFile? @relation(fields: [mediaFileId], references: [id])
+  tvDevice  TVDevice?  @relation(fields: [tvDeviceId], references: [id])
+  campaign  Campaign?  @relation(fields: [campaignId], references: [id])
+
+  @@map("schedule_items")
+}
+
+// === CAMPAIGNS ===
+model Campaign {
+  id          String   @id @default(uuid())
+  adegaId     String
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  isRecurring Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  adega         Adega          @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+  scheduleItems ScheduleItem[]
+
+  @@map("campaigns")
+}
+
+// === STORAGE USAGE ===
+model StorageUsage {
+  id          String  @id @default(uuid())
+  adegaId     String  @unique
+  totalBytes  BigInt  @default(0)
+  filesCount  Int     @default(0)
+
+  adega Adega @relation(fields: [adegaId], references: [id], onDelete: Cascade)
+
+  @@map("storage_usage")
+}
+
+// === LOGS ===
+model Log {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("logs")
+}

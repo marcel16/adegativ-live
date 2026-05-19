@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=1920, height=1080, initial-scale=1.0">
+    <title>AdegaTV Live</title>
+    <script>
+        // Tizen device API helper
+        window.tizenDevice = {
+            getModel: function() {
+                try { return tizen.systeminfo.getCapability('http://tizen.org/feature/platform.model_name'); }
+                catch(e) { return 'Tizen'; }
+            },
+            exit: function() {
+                try { tizen.application.getCurrentApplication().exit(); }
+                catch(e) { window.close(); }
+            }
+        };
+
+        // Listen for remote control keys
+        document.addEventListener('keydown', function(e) {
+            // Forward Tizen key codes to the player
+            var event = new CustomEvent('tv-keydown', { detail: { keyCode: e.keyCode, key: e.key } });
+            window.dispatchEvent(event);
+        });
+    </script>
+</head>
+<body style="margin:0;overflow:hidden;background:#000;">
+    <iframe id="player" src="http://YOUR_SERVER_IP:8080/player/pair"
+            style="width:100%;height:100%;border:none;"
+            allow="autoplay;fullscreen"></iframe>
+    <script>
+        // Auto-fullscreen on Tizen
+        try {
+            if (tizen.application.getCurrentApplication().isFullScreen() === false) {
+                tizen.application.getCurrentApplication().setFullScreen();
+            }
+        } catch(e) {}
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+.env
+.env.local
+.env.production
+*.log
+backups/
+nginx/ssl/
+uploads/
+.DS_Store
+coverage/
+*.tsbuildinfo

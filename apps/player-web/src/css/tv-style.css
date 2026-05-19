@@ -1,0 +1,39 @@
+/* TV-optimized styles */
+html { font-size: 24px; }
+body { background: #000; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; margin: 0; overflow: hidden; height: 100vh; width: 100vw; user-select: none; }
+
+/* Large focus indicator for remote navigation */
+*:focus-visible { outline: 4px solid #22c55e !important; outline-offset: 4px; border-radius: 4px; }
+
+/* Player */
+#player { width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+
+/* Fallback - image display */
+#fallback { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a, #1e293b); }
+#fallback-content { text-align: center; }
+#fallback-content h1 { font-size: 3rem; background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+#fallback-content p { color: #64748b; font-size: 1.2rem; }
+
+/* Blocked screen */
+#blocked-screen { display: none; width: 100vw; height: 100vh; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a, #2d2d2d); text-align: center; padding: 40px; }
+#blocked-screen .icon { font-size: 6rem; margin-bottom: 20px; }
+#blocked-screen h2 { font-size: 2.5rem; color: #ef4444; margin-bottom: 10px; }
+#blocked-screen p { color: #94a3b8; font-size: 1.2rem; max-width: 600px; margin: 0 auto; }
+#blocked-screen .btn { display: inline-block; margin-top: 20px; padding: 16px 48px; background: #22c55e; color: white; text-decoration: none; border-radius: 12px; font-size: 1.2rem; cursor: pointer; }
+
+/* Pairing page - large font for TV */
+.pair-container { text-align: center; padding: 40px; }
+.pair-logo { font-size: 3.5rem; font-weight: 800; background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+.pair-subtitle { color: #94a3b8; font-size: 1.3rem; margin-bottom: 40px; }
+.pair-code-box { background: rgba(255,255,255,0.05); border: 3px solid rgba(34, 197, 94, 0.3); border-radius: 24px; padding: 50px 80px; display: inline-block; animation: pulse 2s ease-in-out infinite; }
+.pair-code { font-size: 5rem; font-weight: 700; letter-spacing: 0.3em; color: #22c55e; font-family: 'Courier New', monospace; }
+.pair-code-label { font-size: 1rem; color: #64748b; margin-top: 15px; letter-spacing: 0.1em; text-transform: uppercase; }
+.pair-instructions { margin-top: 40px; color: #94a3b8; font-size: 1.1rem; line-height: 2; }
+.pair-instructions strong { color: #22c55e; }
+.pair-status { margin-top: 30px; padding: 16px 32px; background: rgba(34, 197, 94, 0.1); border-radius: 12px; color: #22c55e; font-size: 1rem; display: inline-block; }
+.pair-status.loading { background: rgba(234, 179, 8, 0.1); color: #eab308; }
+
+/* Landscape TV ratio (16:9) */
+@media (min-aspect-ratio: 16/9) {
+  .pair-code { font-size: 6rem; }
+}

@@ -1,0 +1,16 @@
+{
+  "id": "com.adegatv.live",
+  "version": "1.0.0",
+  "title": "AdegaTV Live",
+  "iconColor": "#16a34a",
+  "type": "web",
+  "main": "index.html",
+  "resolution": "1920x1080",
+  "bgColor": "#000000",
+  "supportTouchMode": "none",
+  "v8SnapshotFile": "snapshot",
+  "systemSettings": {
+    "appDescription": "Player de conteúdo promocional para TVs de adegas"
+  },
+  "uiRevision": "2"
+}

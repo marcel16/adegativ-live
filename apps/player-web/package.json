@@ -1,0 +1,14 @@
+{
+  "name": "@adegatv/player-web",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "axios": "^1.6.5",
+    "socket.io-client": "^4.7.4"
+  }
+}

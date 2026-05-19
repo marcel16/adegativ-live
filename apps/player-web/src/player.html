@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#16a34a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+  <title>AdegaTV Live</title>
+  <link rel="stylesheet" href="/css/tv-style.css">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; overflow: hidden; width: 100vw; height: 100vh; }
+    #player { width: 100vw; height: 100vh; object-fit: contain; background: #000; }
+    #fallback { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #0f172a, #1e293b); }
+    #fallback-content { text-align: center; }
+    #fallback-content h1 { font-size: 2rem; background: linear-gradient(135deg, #22c55e, #16a34a); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 10px; }
+    #fallback-content p { color: #64748b; font-size: 1.1rem; }
+    #blocked-screen { display: none; width: 100vw; height: 100vh; align-items: center; justify-content: center; background: linear-gradient(135deg, #1a1a1a, #2d2d2d); text-align: center; padding: 40px; }
+    #blocked-screen .icon { font-size: 4rem; margin-bottom: 20px; }
+    #blocked-screen h2 { font-size: 1.8rem; color: #ef4444; margin-bottom: 10px; }
+    #blocked-screen p { color: #94a3b8; font-size: 1rem; max-width: 500px; margin: 0 auto; }
+    #blocked-screen .btn { display: inline-block; margin-top: 20px; padding: 12px 32px; background: #22c55e; color: white; text-decoration: none; border-radius: 8px; font-size: 1rem; }
+    .hidden { display: none !important; }
+    #countdown { position: fixed; bottom: 20px; right: 20px; color: rgba(255,255,255,0.3); font-size: 0.8rem; font-family: monospace; z-index: 100; }
+  </style>
+</head>
+<body>
+  <video id="player" class="hidden" autoplay playsinline muted></video>
+  <div id="fallback">
+    <div id="fallback-content">
+      <h1>AdegaTV Live</h1>
+      <p>Carregando programação...</p>
+    </div>
+  </div>
+  <div id="blocked-screen">
+    <div class="icon">🔒</div>
+    <h2>Assinatura Vencida</h2>
+    <p>Seu período de teste expirou. Renove seu plano para continuar exibindo conteúdo nas TVs.</p>
+    <a class="btn" href="#" onclick="alert('Acesse o painel para renovar seu plano.')">Renovar Plano</a>
+  </div>
+  <div id="countdown"></div>
+
+  <script>
+    const API_URL = window.location.origin.replace(':3004', '') || 'http://localhost:3000';
+    const pathParts = window.location.pathname.split('/player/');
+    const deviceToken = (pathParts.length > 1 && pathParts[1]) ? pathParts[1] : localStorage.getItem('adegatv_deviceToken');
+
+    if (!deviceToken) {
+      window.location.href = '/pair';
+    }
+
+    let playlist = [];
+    let mediaItems = [];
+    let currentIndex = 0;
+    let videoElement = document.getElementById('player');
+    let fallbackEl = document.getElementById('fallback');
+    let blockedScreen = document.getElementById('blocked-screen');
+    let fallbackContent = document.querySelector('#fallback-content');
+    let countdownEl = document.getElementById('countdown');
+
+    async function loadPlaylist() {
+      try {
+        const res = await fetch(`${API_URL}/api/tv/playlist/${deviceToken}`);
+        if (res.status === 404) { window.location.href = '/pair'; return; }
+        const data = await res.json();
+
+        if (data.blocked) {
+          fallbackEl.style.display = 'none';
+          videoElement.classList.add('hidden');
+          blockedScreen.style.display = 'flex';
+          return;
+        }
+
+        blockedScreen.style.display = 'none';
+
+        mediaItems = [];
+        if (data.schedule && data.schedule.length > 0) {
+          mediaItems = data.schedule.filter(item => item.mediaFile).map(item => ({
+            url: item.mediaFile.url,
+            type: item.mediaFile.type,
+            duration: (item.duration || item.mediaFile.duration || 10) * 1000,
+            campaign: item.campaign?.name,
+          }));
+        }
+
+        if (mediaItems.length === 0 && data.fallback) {
+          mediaItems = data.fallback.map(m => ({
+            url: m.url,
+            type: m.type,
+            duration: (m.duration || 10) * 1000,
+          }));
+        }
+
+        if (mediaItems.length === 0) {
+          fallbackEl.style.display = 'flex';
+          fallbackContent.innerHTML = '<h1>AdegaTV Live</h1><p>Nenhum conteúdo programado. Adicione mídia e crie uma agenda no painel.</p>';
+          return;
+        }
+
+        fallbackEl.style.display = 'none';
+        currentIndex = 0;
+        playItem(currentIndex);
+      } catch (err) {
+        setTimeout(loadPlaylist, 10000);
+      }
+    }
+
+    function playItem(index) {
+      if (mediaItems.length === 0) { loadPlaylist(); return; }
+      if (index >= mediaItems.length) index = 0;
+      currentIndex = index;
+
+      const item = mediaItems[currentIndex];
+      if (!item) { playItem(0); return; }
+
+      countdownEl.textContent = `${currentIndex + 1}/${mediaItems.length}`;
+
+      if (item.url && (item.url.endsWith('.mp4') || item.url.endsWith('.webm') || item.type === 'VIDEO')) {
+        videoElement.classList.remove('hidden');
+        videoElement.src = item.url;
+        videoElement.play().catch(() => setTimeout(() => nextItem(), 5000));
+        videoElement.onended = () => nextItem();
+        videoElement.onerror = () => nextItem();
+      } else if (item.url) {
+        videoElement.classList.add('hidden');
+        videoElement.pause();
+        videoElement.src = '';
+        fallbackEl.style.display = 'flex';
+        fallbackContent.innerHTML = `<img src="${item.url}" style="max-width:90vw;max-height:85vh;border-radius:8px;object-fit:contain;"><p style="color:#22c55e;margin-top:8px;font-size:0.9rem;">${item.campaign || ''}</p>`;
+        const duration = item.duration || 10000;
+        if (window._imageTimer) clearTimeout(window._imageTimer);
+        window._imageTimer = setTimeout(() => nextItem(), duration);
+      } else {
+        nextItem();
+      }
+    }
+
+    function nextItem() {
+      currentIndex++;
+      playItem(currentIndex);
+    }
+
+    setInterval(loadPlaylist, 60000);
+
+    setInterval(async () => {
+      try {
+        const tvId = localStorage.getItem('adegatv_tvId');
+        if (tvId) await fetch(`${API_URL}/api/tv/${tvId}/ping`, { method: 'POST' });
+      } catch {}
+    }, 30000);
+
+    loadPlaylist();
+  </script>
+  <script src="/js/tv-nav.js"></script>
+</body>
+</html>

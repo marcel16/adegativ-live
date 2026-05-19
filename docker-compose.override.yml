@@ -1,0 +1,21 @@
+# Dev overrides: source code bind-mounts for hot-reload, direct service access
+services:
+  api:
+    volumes:
+      - ./apps/api/src:/app/src
+
+  frontend:
+    volumes:
+      - ./apps/frontend/src:/app/src
+
+  admin:
+    volumes:
+      - ./apps/admin/src:/app/src
+
+  player-web:
+    volumes:
+      - ./apps/player-web/src:/app/src
+
+  video-worker:
+    volumes:
+      - ./packages/video-worker/src:/app/src
