@@ -14,6 +14,7 @@ import { CampaignModule } from './campaign/campaign.module';
 import { WebSocketModule } from './websocket/websocket.module';
 import { PaymentModule } from './payment/payment.module';
 import { SettingsModule } from './settings/settings.module';
+import { StreamModule } from './stream/stream.module';
 import { HealthController } from './health.controller';
 
 @Module({
@@ -35,6 +36,7 @@ import { HealthController } from './health.controller';
     CampaignModule,
     WebSocketModule,
     PaymentModule,
+    StreamModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -29,6 +29,16 @@ export default function AdegasPage() {
     }
   };
 
+  const generateStreamCode = async (adegaId: string) => {
+    try {
+      const { data } = await api.post(`/adegas/${adegaId}/generate-stream-code`);
+      setAdegas(prev => prev.map(a => a.id === adegaId ? { ...a, streamCode: data.streamCode } : a));
+      Toast.success(`Código de stream gerado: ${data.streamCode}`);
+    } catch (err: any) {
+      Toast.error(err.response?.data?.message || 'Erro ao gerar código');
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -62,6 +72,17 @@ export default function AdegasPage() {
             <div className="flex gap-4 mt-4 text-sm text-gray-600">
               <span>📺 {adega.tvDevices?.length || 0} TVs</span>
             </div>
+            {adega.streamCode ? (
+              <div className="mt-3 p-2 bg-green-50 border border-green-200 rounded-lg text-sm">
+                <p className="text-green-800 font-medium">Stream: {adega.streamCode}</p>
+                <p className="text-green-600 text-xs mt-0.5 break-all">https://tv.adega.queroservico.store/{adega.streamCode}/index.m3u8</p>
+              </div>
+            ) : (
+              <button onClick={() => generateStreamCode(adega.id)}
+                className="mt-3 text-xs px-3 py-1.5 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200 transition font-medium">
+                + Gerar Código de Stream
+              </button>
+            )}
           </div>
         ))}
       </div>

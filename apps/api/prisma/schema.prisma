@@ -61,6 +61,12 @@ enum SchedulePriority {
   EMERGENCY
 }
 
+enum OverlayMode {
+  BOTTOM_BAR
+  VERTICAL_BAR
+  CYCLING_BOX
+}
+
 enum LoopMode {
   SEQUENTIAL
   RANDOM
@@ -136,6 +142,7 @@ model Adega {
   phone         String?
   openingHours  Json?
   isActive      Boolean  @default(true)
+  streamCode    String?  @unique
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -340,6 +347,7 @@ model ScheduleItem {
   endTime     String?
   duration    Int?
   sortOrder   Int              @default(0)
+  overlayMode OverlayMode?
   isActive    Boolean          @default(true)
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -356,6 +364,8 @@ model Campaign {
   adegaId     String
   name        String
   description String?
+  price       Float?
+  image       String?
   startDate   DateTime?
   endDate     DateTime?
   isRecurring Boolean  @default(false)
